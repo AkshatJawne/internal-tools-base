@@ -7,8 +7,13 @@ import { ingestVendorEvent } from "../src/apps/kyc/ingest";
 import { makeVendorEvent } from "./fixtures";
 import { seal } from "../src/kit/engine/fields";
 import { refunds as refundsDef } from "../src/apps/refunds/definition";
+import { hashPassword } from "../src/kit/auth/password";
+
+// One shared dev password so any seeded persona can be used for demos. The sign-in page shows the demo account.
+const DEV_PASSWORD = process.env.DEV_PASSWORD ?? "acmepay-demo";
 
 const USERS = [
+  { id: "u_dana", name: "Dana Reyes", email: "demo@acmepay.example", role: "platform_owner", team: "Platform" },
   { id: "u_alice", name: "Alice Analyst", email: "alice@acmepay.example", role: "kyc_analyst", team: "Compliance" },
   { id: "u_ben", name: "Ben Analyst", email: "ben@acmepay.example", role: "kyc_analyst", team: "Compliance" },
   { id: "u_lena", name: "Lena Lead", email: "lena@acmepay.example", role: "kyc_lead", team: "Compliance" },
@@ -24,7 +29,8 @@ async function main() {
   for (const sql of readFileSync(join(__dirname, "audit-triggers.sql"), "utf8").split(/;\s*\n(?=CREATE)/)) {
     await db.$executeRawUnsafe(sql.trim().replace(/;$/, "") + ";");
   }
-  for (const u of USERS) await db.user.create({ data: u });
+  const passwordHash = hashPassword(DEV_PASSWORD);
+  for (const u of USERS) await db.user.create({ data: { ...u, passwordHash } });
   await audit({ actor: SYSTEM("seed"), action: "platform.seeded", entityType: "Platform", entityId: "seed" });
 
   // KYC: a spread of ages so SLA badges show green, amber and red.

@@ -16,20 +16,20 @@ export default async function Approvals() {
   return (
     <>
       <PageHeader title="Approvals" subtitle="One inbox for every maker-checker step across apps. The requester can never approve their own request." />
-      <h2 className="mb-2 text-sm font-semibold text-slate-700">Waiting for you ({forMe.length})</h2>
+      <h2 className="mb-2 text-sm font-semibold text-ink">Waiting for you ({forMe.length})</h2>
       <div className="mb-8 grid gap-3">
-        {forMe.length === 0 && <p className="text-sm text-slate-400">Nothing waiting for you.</p>}
+        {forMe.length === 0 && <p className="text-sm text-ink-3">Nothing waiting for you.</p>}
         {forMe.map((p) => (
           <Card key={p.id}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs text-slate-500">{getApp(p.appId)?.icon} {getApp(p.appId)?.name} · {fmtDate(p.createdAt)}</div>
+                <div className="text-xs text-ink-2">{getApp(p.appId)?.name} · {fmtDate(p.createdAt)}</div>
                 <div className="font-medium">{p.summary}</div>
-                <div className="text-sm text-slate-500">Requested by {p.makerName}{p.makerReason ? `: “${p.makerReason}”` : ""}</div>
+                <div className="text-sm text-ink-2">Requested by {p.makerName}{p.makerReason ? `: “${p.makerReason}”` : ""}</div>
               </div>
               <ActionForm action={decideApprovalAction} className="flex w-96 shrink-0 gap-2">
                 <input type="hidden" name="approvalId" value={p.id} />
-                <input name="reason" placeholder="Decision note" className={input} />
+                <input name="reason" placeholder="Decision note" className={`${input} w-full`} />
                 <button name="decision" value="approve" className={btn.primary}>Approve</button>
                 <button name="decision" value="reject" className={btn.secondary}>Reject</button>
               </ActionForm>
@@ -39,7 +39,7 @@ export default async function Approvals() {
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">Your requests</h2>
+          <h2 className="mb-2 text-sm font-semibold text-ink">Your requests</h2>
           <DataTable rows={mine} rowKey={(r) => r.id} empty="You haven't requested anything." columns={[
             { key: "s", label: "Request", render: (r) => r.summary },
             { key: "st", label: "Status", render: (r) => <StatusBadge s={r.status} /> },
@@ -47,7 +47,7 @@ export default async function Approvals() {
           ]} />
         </div>
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">Recently decided</h2>
+          <h2 className="mb-2 text-sm font-semibold text-ink">Recently decided</h2>
           <DataTable rows={recent} rowKey={(r) => r.id} empty="No decisions yet." columns={[
             { key: "s", label: "Request", render: (r) => r.summary },
             { key: "m", label: "Maker → checker", render: (r) => `${r.makerName} → ${r.checkerName ?? "—"}` },

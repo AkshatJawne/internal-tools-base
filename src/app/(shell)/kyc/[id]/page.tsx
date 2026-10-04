@@ -28,7 +28,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <Link href="/kyc" className="text-sm text-indigo-600">← Queue</Link>
+      <Link href="/kyc" className="text-sm text-accent">← Queue</Link>
       <PageHeader
         title={<span className="flex items-center gap-2">{c.externalRef} <Badge tone={c.riskTier === "high" ? "red" : c.riskTier === "medium" ? "amber" : "gray"}>{c.riskTier} risk</Badge> <Badge>{c.status.replace("_", " ")}</Badge></span>}
         subtitle={s.state === "done" ? `Decided: ${c.decision} · ${c.decisionReason}` : `SLA ${timeUntil(s.due)} (${settings.slaHours[c.riskTier as "low"]}h for ${c.riskTier} risk)`}
@@ -55,7 +55,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             <div className="grid gap-3 sm:grid-cols-2">
               {c.documents.map((d) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={d.id} alt={d.kind} className="w-full rounded-lg border border-slate-200" src={`data:image/svg+xml;base64,${Buffer.from(d.svg).toString("base64")}`} />
+                <img key={d.id} alt={d.kind} className="w-full rounded-lg border border-line" src={`data:image/svg+xml;base64,${Buffer.from(d.svg).toString("base64")}`} />
               ))}
             </div>
           </Card>
@@ -75,7 +75,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
                 </div>
                 <div>
                   <label className={label} htmlFor="reasonCode">Reason code</label>
-                  <select id="reasonCode" name="reasonCode" className={input} required defaultValue="">
+                  <select id="reasonCode" name="reasonCode" className={`${input} w-full`} required defaultValue="">
                     <option value="" disabled>Select…</option>
                     {(["approve", "reject", "escalate"] as const).map((d) => (
                       <optgroup key={d} label={d}>{settings.kycReasonCodes[d].map((r) => <option key={r}>{r}</option>)}</optgroup>
@@ -84,7 +84,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
                 </div>
                 <div>
                   <label className={label} htmlFor="note">Note</label>
-                  <textarea id="note" name="note" rows={2} className={input} />
+                  <textarea id="note" name="note" rows={2} className={`${input} w-full`} />
                 </div>
                 {needsSignoff && <p className="text-xs text-amber-700">{c.riskTier} risk: approve/reject needs a KYC lead&apos;s sign-off.</p>}
                 <button className={btn.primary}>Submit decision</button>
@@ -94,20 +94,20 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
           {approval && (
             <Card title="Four-eyes sign-off">
               <p className="text-sm">{approval.makerName} proposed: <strong>{approval.summary}</strong></p>
-              {approval.makerReason && <p className="mt-1 text-xs text-slate-500">Note: {approval.makerReason}</p>}
+              {approval.makerReason && <p className="mt-1 text-xs text-ink-2">Note: {approval.makerReason}</p>}
               {approval.makerId === user.id ? (
                 <p className="mt-3 text-sm text-amber-700">Waiting for a lead. You can&apos;t sign off your own decision.</p>
               ) : can(user, "kyc.case.signoff") ? (
                 <ActionForm action={decideApprovalAction} className="mt-3 space-y-2">
                   <input type="hidden" name="approvalId" value={approval.id} />
-                  <input name="reason" placeholder="Sign-off note (required)" className={input} />
+                  <input name="reason" placeholder="Sign-off note (required)" className={`${input} w-full`} />
                   <div className="flex gap-2">
                     <button name="decision" value="approve" className={btn.primary}>Sign off</button>
                     <button name="decision" value="reject" className={btn.secondary}>Send back</button>
                   </div>
                 </ActionForm>
               ) : (
-                <p className="mt-3 text-sm text-slate-500">Needs a user with kyc.case.signoff.</p>
+                <p className="mt-3 text-sm text-ink-2">Needs a user with kyc.case.signoff.</p>
               )}
             </Card>
           )}
@@ -116,7 +116,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             {can(user, "kyc.case.reassign") && !["approved", "rejected", "pending_signoff"].includes(c.status) && (
               <ActionForm action={reassignCase} className="mt-2 flex gap-2">
                 <input type="hidden" name="caseId" value={c.id} />
-                <select name="assigneeId" className={input} defaultValue={c.assigneeId ?? ""}>
+                <select name="assigneeId" className={`${input} w-full`} defaultValue={c.assigneeId ?? ""}>
                   {users.filter((u) => can(u, "kyc.case.decide")).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
                 <button className={btn.secondary}>Assign</button>

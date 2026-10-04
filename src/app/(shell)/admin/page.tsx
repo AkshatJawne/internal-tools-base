@@ -16,7 +16,7 @@ export default async function AdminCenter() {
   ]);
   return (
     <>
-      <PageHeader title="Admin center" subtitle="Every app on the platform, who owns it, what it can reach, and who can open it." />
+      <PageHeader title="Platform overview" subtitle="Every app on the platform, who owns it, what it can reach, and who can open it." />
       <div className="mb-6 grid grid-cols-5 gap-4">
         <Stat label="Apps" value={APPS.length} />
         <Stat label="Users" value={users} />
@@ -24,12 +24,12 @@ export default async function AdminCenter() {
         <Stat label="Audit events (24h)" value={events} />
         <Stat label="Connector calls" value={<>{calls}{blocked > 0 && <span className="ml-2 text-sm text-red-600">{blocked} blocked</span>}</>} />
       </div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-700">App catalog</h2>
+      <h2 className="mb-2 text-sm font-semibold text-ink">App catalog</h2>
       <DataTable
         rows={APPS}
         rowKey={(a) => a.id}
         columns={[
-          { key: "n", label: "App", render: (a) => <Link className="font-medium text-indigo-600" href={a.route}>{a.icon} {a.name}</Link> },
+          { key: "n", label: "App", render: (a) => <Link className="font-medium text-accent" href={a.route}>{a.name}</Link> },
           { key: "k", label: "Type", render: (a) => <Badge tone={a.kind === "generated" ? "blue" : "purple"}>{a.kind}</Badge> },
           { key: "o", label: "Owner", render: (a) => a.owner },
           { key: "p", label: "Access permission", render: (a) => <code className="text-xs">{a.permission}</code> },
@@ -37,7 +37,7 @@ export default async function AdminCenter() {
         ]}
       />
       <Card title="Adding app #4" className="mt-6">
-        <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-600">
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-2">
           <li>Someone asks Devin (Slack, Linear or the web app): “Build a chargebacks tracker: fields…, approvals over $X”.</li>
           <li>Devin follows <code>.agents/skills/new-internal-app/SKILL.md</code>: a definition file, a manifest entry and permissions. No new auth, audit or approval code.</li>
           <li>The PR runs CI and a preview deploy; CODEOWNERS pulls in security if it touches the kit or moves money.</li>
