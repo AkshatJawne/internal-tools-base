@@ -8,6 +8,7 @@ import { getSettings } from "@/kit/settings";
 import { errorMessage } from "@/kit/action-state";
 import { getFields } from "@/kit/engine/fields";
 import { DEFINITIONS } from "@/apps/definitions";
+import { unsealPii } from "@/kit/pii";
 
 const KYC_PII_FIELDS = ["ssn", "dob", "email"] as const;
 
@@ -22,7 +23,7 @@ export async function revealPii(input: { entityType: "KycCase" | "Record"; entit
     if (input.entityType === "KycCase") {
       if (!can(user, "kyc.case.read") || !(KYC_PII_FIELDS as readonly string[]).includes(input.field)) return { error: "Not allowed" };
       const c = await db.kycCase.findUnique({ where: { id: input.entityId } });
-      value = c?.[input.field as (typeof KYC_PII_FIELDS)[number]];
+      value = c ? unsealPii(c[input.field as (typeof KYC_PII_FIELDS)[number]]) : undefined;
       appId = "kyc";
     } else {
       const rec = await db.record.findUnique({ where: { id: input.entityId } });
@@ -30,7 +31,7 @@ export async function revealPii(input: { entityType: "KycCase" | "Record"; entit
       if (!rec || !def || !can(user, def.permissions.read)) return { error: "Not allowed" };
       const field = getFields(def, await getSettings()).find((f) => f.name === input.field && f.pii);
       if (!field) return { error: "Not a PII field" };
-      value = String((JSON.parse(rec.data) as Record<string, unknown>)[field.name] ?? "");
+      value = unsealPii(String((JSON.parse(rec.data) as Record<string, unknown>)[field.name] ?? ""));
       appId = rec.appId;
     }
     if (value === undefined) return { error: "Not found" };

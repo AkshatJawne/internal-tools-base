@@ -4,3 +4,8 @@
 /prisma/                  @AkshatJawne
 /src/apps/refunds/        @AkshatJawne
 /src/apps/kyc/            @AkshatJawne
+/src/kit/connectors/      @AkshatJawne
+/deploy/                  @AkshatJawne
+/.github/                 @AkshatJawne
+/scripts/                 @AkshatJawne
+/docs/adr/                @AkshatJawne

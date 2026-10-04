@@ -18,5 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: cp .env.example .env && pnpm db:reset
       - run: pnpm lint
+      - run: pnpm lint:platform # permission-lint, audit-lint, dep-lint (see docs/adr/0005)
+      - run: pnpm audit:verify # seeded chain must verify
       - run: pnpm typecheck
       - run: pnpm build

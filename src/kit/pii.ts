@@ -1,3 +1,5 @@
+import { getKms } from "@/kit/crypto";
+
 export type PiiKind = "ssn" | "dob" | "email" | "generic";
 
 export function maskValue(value: string | null | undefined, kind: PiiKind = "generic"): string {
@@ -15,3 +17,11 @@ export function maskValue(value: string | null | undefined, kind: PiiKind = "gen
       return value.length <= 4 ? "••••" : `${"•".repeat(Math.min(8, value.length - 2))}${value.slice(-2)}`;
   }
 }
+
+/** Encrypt a PII value for storage and precompute the mask shown to everyone who hasn't revealed it. */
+export function sealPii(value: string, kind: PiiKind = "generic"): { cipher: string; mask: string } {
+  return { cipher: getKms().encrypt(value), mask: maskValue(value, kind) };
+}
+
+/** Only revealPii() should call this; it enforces permission + reason and audits. */
+export const unsealPii = (cipher: string): string => getKms().decrypt(cipher);

@@ -5,6 +5,8 @@ import { audit, SYSTEM } from "../src/kit/audit";
 import { requestApproval } from "../src/kit/approvals";
 import { ingestVendorEvent } from "../src/apps/kyc/ingest";
 import { makeVendorEvent } from "./fixtures";
+import { seal } from "../src/kit/engine/fields";
+import { refunds as refundsDef } from "../src/apps/refunds/definition";
 
 const USERS = [
   { id: "u_alice", name: "Alice Analyst", email: "alice@acmepay.example", role: "kyc_analyst", team: "Compliance" },
@@ -43,7 +45,7 @@ async function main() {
     { customerName: "Sofia Rossi", customerEmail: "sofia.r@example.com", transactionId: "txn_1PX77", amount: 15, currency: "GBP", reasonCode: "Goodwill credit", status: "rejected" },
   ];
   for (const { status, ...data } of refunds) {
-    const rec = await db.record.create({ data: { appId: "refunds", status, data: JSON.stringify(data), createdBy: omar.name } });
+    const rec = await db.record.create({ data: { appId: "refunds", status, data: JSON.stringify(seal(refundsDef.fields, data)), createdBy: omar.name } });
     await audit({ actor: omar, action: "record.create", appId: "refunds", entityType: "Record", entityId: rec.id, after: { status } });
     if (status === "pending_approval") {
       await requestApproval({
@@ -66,6 +68,18 @@ async function main() {
     await db.record.create({ data: { appId: "flags", status, data: JSON.stringify(data), createdBy: "Platform Eng" } });
   }
   console.log("Seeded users, settings defaults, 14 KYC cases, refunds and flags.");
+  // Change requests (tier-2 self-service): one open, one with a PR + preview waiting on the requester.
+  const cr1 = await db.changeRequest.create({
+    data: { requesterId: omar.id, requesterName: omar.name, appId: "refunds", title: "Show the customer's previous refunds on the refund page", description: "When I review a refund I open the payments console to check for repeat refunds on the same customer. Show the last 3 refunds (date, amount, status) for the same customer email on the refund detail page so I can spot abuse without leaving the app.", classification: "logic", urgency: "normal" },
+  });
+  await audit({ actor: omar, action: "change_request.created", appId: "refunds", entityType: "ChangeRequest", entityId: cr1.id, after: { title: cr1.title, classification: "logic", urgency: "normal" } });
+  const cr2 = await db.changeRequest.create({
+    data: { requesterId: ben.id, requesterName: ben.name, appId: "kyc", title: "Add a 'documents expired' reason code and show document expiry dates", description: "Analysts reject cases with expired IDs under 'Identity mismatch', which skews our reject-reason reporting. Add a reject reason code 'Document expired' and show each document's expiry date next to the thumbnail.", classification: "ui", urgency: "low", status: "preview_ready", prUrl: "https://github.com/AkshatJawne/internal-tools-base/pull/1", previewUrl: "https://preview.example.com/cr-seed" },
+  });
+  await audit({ actor: ben, action: "change_request.created", appId: "kyc", entityType: "ChangeRequest", entityId: cr2.id, after: { title: cr2.title, classification: "ui", urgency: "low" } });
+  await audit({ actor: SYSTEM("devin"), action: "change_request.pr_open", appId: "kyc", entityType: "ChangeRequest", entityId: cr2.id, before: { status: "dispatched" }, after: { status: "pr_open", prUrl: cr2.prUrl } });
+  await audit({ actor: SYSTEM("ci"), action: "change_request.preview_ready", appId: "kyc", entityType: "ChangeRequest", entityId: cr2.id, before: { status: "pr_open" }, after: { status: "preview_ready", previewUrl: cr2.previewUrl } });
+
 }
 
 main().finally(() => db.$disconnect());

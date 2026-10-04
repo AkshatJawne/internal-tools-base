@@ -4,7 +4,6 @@ import { db } from "@/kit/db";
 import { requirePagePermission } from "@/kit/auth";
 import { can } from "@/kit/rbac";
 import { getSettings } from "@/kit/settings";
-import { maskValue } from "@/kit/pii";
 import { decideApprovalAction } from "@/kit/approvals-actions";
 import { Badge, Card, Field, PageHeader, btn, input, label, timeUntil } from "@/kit/ui";
 import { ActionForm } from "@/kit/ui/ActionForm";
@@ -40,9 +39,9 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             <dl className="grid grid-cols-2 gap-4">
               <Field label="Name">{c.firstName} {c.lastName}</Field>
               <Field label="Country">{c.country}</Field>
-              <Field label="Email"><PiiField entityType="KycCase" entityId={c.id} field="email" masked={maskValue(c.email, "email")} canReveal={reveal} /></Field>
-              <Field label="SSN"><PiiField entityType="KycCase" entityId={c.id} field="ssn" masked={maskValue(c.ssn, "ssn")} canReveal={reveal} /></Field>
-              <Field label="Date of birth"><PiiField entityType="KycCase" entityId={c.id} field="dob" masked={maskValue(c.dob, "dob")} canReveal={reveal} /></Field>
+              <Field label="Email"><PiiField entityType="KycCase" entityId={c.id} field="email" masked={c.emailMask} canReveal={reveal} /></Field>
+              <Field label="SSN"><PiiField entityType="KycCase" entityId={c.id} field="ssn" masked={c.ssnMask} canReveal={reveal} /></Field>
+              <Field label="Date of birth"><PiiField entityType="KycCase" entityId={c.id} field="dob" masked="••/••/••••" canReveal={reveal} /></Field>
             </dl>
           </Card>
           <Card title="Vendor results">

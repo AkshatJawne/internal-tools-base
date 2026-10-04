@@ -1,0 +1,56 @@
+# Egress policy for the internal-tools pods. This is the network-layer twin of the connector
+# allowlist in src/kit/connectors: code that bypasses callConnector() still cannot reach anything
+# not listed here. Review alongside catalog.ts changes (CODEOWNERS: security).
+#
+# Hostname-based egress needs a CNI/mesh that supports it (Cilium CiliumNetworkPolicy toDNS/toFQDNs,
+# Istio ServiceEntry). The plain NetworkPolicy below shows the shape with CIDR placeholders; the
+# Cilium variant is the one to deploy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: internal-tools-egress
+  namespace: internal-tools
+spec:
+  podSelector:
+    matchLabels:
+      app: internal-tools
+  policyTypes: [Egress]
+  egress:
+    - to: # DNS
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+          podSelector: { matchLabels: { k8s-app: kube-dns } }
+      ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }]
+    - to: # Postgres (private subnet)
+        - ipBlock: { cidr: 10.20.0.0/24 }
+      ports: [{ protocol: TCP, port: 5432 }]
+    - to: # Secrets manager + KMS via VPC endpoints
+        - ipBlock: { cidr: 10.20.1.0/24 }
+      ports: [{ protocol: TCP, port: 443 }]
+    - to: # Connector hosts (replace with your egress proxy CIDR; one proxy rule per connector in catalog.ts)
+        - ipBlock: { cidr: 10.20.2.0/24 }
+      ports: [{ protocol: TCP, port: 443 }]
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: internal-tools-egress-fqdn
+  namespace: internal-tools
+spec:
+  endpointSelector:
+    matchLabels:
+      app: internal-tools
+  egress:
+    - toEndpoints:
+        - matchLabels: { k8s:io.kubernetes.pod.namespace: kube-system, k8s-app: kube-dns }
+      toPorts:
+        - ports: [{ port: "53", protocol: ANY }]
+          rules: { dns: [{ matchPattern: "*" }] }
+    - toFQDNs: # one entry per connector in src/kit/connectors/catalog.ts
+        - matchName: api.stripe.com            # payments
+        - matchName: slack.com                 # slack
+        - matchName: email.us-east-1.amazonaws.com # email (SES)
+        - matchName: app.launchdarkly.com      # flags
+        - matchName: api.devin.ai              # devin (CI runner only; see docs/devin/automation.md)
+      toPorts:
+        - ports: [{ port: "443", protocol: TCP }]
+    # kyc-vendor is inbound only (webhooks) and intentionally has no egress rule.

@@ -4,8 +4,7 @@ import { db } from "@/kit/db";
 import { requirePagePermission } from "@/kit/auth";
 import { can } from "@/kit/rbac";
 import { getSettings } from "@/kit/settings";
-import { maskValue } from "@/kit/pii";
-import { getFields } from "@/kit/engine/fields";
+import { getFields, redact } from "@/kit/engine/fields";
 import { runRecordAction } from "@/kit/engine/actions";
 import type { RecordData } from "@/kit/engine/types";
 import { Badge, Card, Field, PageHeader, btn, fmtDate, fmtMoney, input } from "@/kit/ui";
@@ -25,7 +24,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
   if (!rec || rec.appId !== appId) notFound();
   const settings = await getSettings();
   const fields = getFields(def, settings);
-  const data = JSON.parse(rec.data) as RecordData;
+  const data = redact(fields, JSON.parse(rec.data) as RecordData); // PII arrives here already masked; reveal goes through revealPii()
   const known = new Set(fields.map((f) => f.name));
   const systemFields = Object.entries(data).filter(([k]) => !known.has(k));
   const actions = def.actions.filter((a) => a.from.includes(rec.status) && can(user, a.permission));
@@ -45,7 +44,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
                 return (
                   <Field key={f.name} label={f.label}>
                     {v == null || v === "" ? <span className="text-slate-400">—</span>
-                      : f.pii ? <PiiField entityType="Record" entityId={rec.id} field={f.name} masked={maskValue(String(v), f.type === "email" ? "email" : "generic")} canReveal={can(user, "pii.reveal")} />
+                      : f.pii ? <PiiField entityType="Record" entityId={rec.id} field={f.name} masked={String(v)} canReveal={can(user, "pii.reveal")} />
                       : f.type === "money" ? fmtMoney(Number(v), String(data.currency ?? "USD"))
                       : String(v)}
                   </Field>
