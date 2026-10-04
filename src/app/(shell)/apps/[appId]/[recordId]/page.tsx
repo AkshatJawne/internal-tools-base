@@ -6,6 +6,7 @@ import { can } from "@/kit/rbac";
 import { getSettings } from "@/kit/settings";
 import { getFields, redact } from "@/kit/engine/fields";
 import { runRecordAction } from "@/kit/engine/actions";
+import { PENDING_APPROVAL } from "@/kit/engine/definition";
 import type { RecordData } from "@/kit/engine/types";
 import { Badge, Card, Field, PageHeader, btn, fmtDate, fmtMoney, input } from "@/kit/ui";
 import { ActionForm } from "@/kit/ui/ActionForm";
@@ -28,7 +29,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
   const known = new Set(fields.map((f) => f.name));
   const systemFields = Object.entries(data).filter(([k]) => !known.has(k));
   const actions = def.actions.filter((a) => a.from.includes(rec.status) && can(user, a.permission));
-  const pending = rec.status === "pending_approval" ? await db.approvalRequest.findFirst({ where: { entityType: "Record", entityId: rec.id, status: "pending" } }) : null;
+  const pending = rec.status === PENDING_APPROVAL ? await db.approvalRequest.findFirst({ where: { entityType: "Record", entityId: rec.id, status: "pending" } }) : null;
   const status = def.statuses[rec.status];
 
   return (

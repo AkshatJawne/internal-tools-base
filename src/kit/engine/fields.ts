@@ -9,7 +9,7 @@ export function getFields(def: AppDefinition, settings: Settings): FieldDef[] {
 }
 
 export function optionsFor(f: FieldDef, settings: Settings): string[] {
-  return f.optionsFrom ? settings[f.optionsFrom] : (f.options ?? []);
+  return f.optionsFrom ? (settings.optionLists[f.optionsFrom] ?? []) : (f.options ?? []);
 }
 
 function fieldSchema(f: FieldDef, settings: Settings): z.ZodTypeAny {

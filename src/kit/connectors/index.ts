@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { Prisma } from "@prisma/client";
 import { db } from "@/kit/db";
 import { audit, SYSTEM } from "@/kit/audit";
 import { getApp } from "@/apps/manifest";
@@ -46,24 +47,38 @@ export async function callConnector<T>(opts: GatewayCall, fn: () => Promise<T>):
     await audit({ actor: SYSTEM("data-policy"), action: "connector.blocked", appId: opts.appId, entityType: "Connector", entityId: opts.connector, reason: violation });
     throw new DataPolicyError(`Data policy: ${violation}`);
   }
-  if (opts.idempotencyKey) {
+  if (opts.idempotencyKey && dataClass === "pii") throw new DataPolicyError("Data policy: idempotent calls cannot carry pii (the replayed response would be stored)");
+  const data = {
+    connector: opts.connector,
+    operation: opts.operation,
+    appId: opts.appId,
+    dataClass,
+    request: dataClass === "pii" ? "[redacted: pii]" : JSON.stringify(opts.request),
+    idempotencyKey: opts.idempotencyKey,
+  };
+  // Claim the idempotency key *before* calling out, so two concurrent callers cannot both reach the provider.
+  // The loser either returns the stored response or fails fast while the first call is still in flight.
+  let call: { id: string };
+  try {
+    call = await db.connectorCall.create({ data: { ...data, status: "pending" }, select: { id: true } });
+  } catch (err) {
+    if (!opts.idempotencyKey || !(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err;
     const prior = await db.connectorCall.findUnique({ where: { idempotencyKey: opts.idempotencyKey } });
-    if (prior?.response) return JSON.parse(prior.response) as T;
+    if (prior?.status === "ok" && prior.response) return JSON.parse(prior.response) as T;
+    throw new Error(`Connector call ${opts.connector}.${opts.operation} is already in flight for key ${opts.idempotencyKey}`);
   }
-  const response = await fn();
-  await db.connectorCall.create({
-    data: {
-      connector: opts.connector,
-      operation: opts.operation,
-      appId: opts.appId,
-      status: "ok",
-      dataClass,
-      request: dataClass === "pii" ? "[redacted: pii]" : JSON.stringify(opts.request),
-      response: JSON.stringify(response),
-      idempotencyKey: opts.idempotencyKey,
-    },
-  });
-  return response;
+  try {
+    const response = await fn();
+    await db.connectorCall.update({
+      where: { id: call.id },
+      data: { status: "ok", response: dataClass === "pii" ? "[redacted: pii]" : JSON.stringify(response) },
+    });
+    return response;
+  } catch (err) {
+    // Clear the key so a retry can go through; the error row stays for the evidence trail.
+    await db.connectorCall.update({ where: { id: call.id }, data: { status: "error", idempotencyKey: null, response: String(err).slice(0, 500) } });
+    throw err;
+  }
 }
 
 const id = (prefix: string) => `${prefix}_${randomBytes(6).toString("hex")}`;

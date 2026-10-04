@@ -7,6 +7,7 @@ import { ingestVendorEvent } from "../src/apps/kyc/ingest";
 import { makeVendorEvent } from "./fixtures";
 import { seal } from "../src/kit/engine/fields";
 import { refunds as refundsDef } from "../src/apps/refunds/definition";
+import { vendors as vendorsDef } from "../src/apps/vendors/definition";
 
 const USERS = [
   { id: "u_alice", name: "Alice Analyst", email: "alice@acmepay.example", role: "kyc_analyst", team: "Compliance" },
@@ -67,7 +68,24 @@ async function main() {
   for (const { status, ...data } of flags) {
     await db.record.create({ data: { appId: "flags", status, data: JSON.stringify(data), createdBy: "Platform Eng" } });
   }
-  console.log("Seeded users, settings defaults, 14 KYC cases, refunds and flags.");
+  // Vendor onboarding: one small vendor waiting for review, one large one already waiting for a second approver.
+  const vendors = [
+    { legalName: "Northwind Cloud Ltd", category: "Infrastructure", country: "GB", annualSpend: 18000, contactEmail: "billing@northwind.example", taxId: "GB123456789", status: "submitted" },
+    { legalName: "Acme Consulting LLP", category: "Professional services", country: "US", annualSpend: 240000, contactEmail: "ap@acme-consulting.example", taxId: "12-3456789", status: "pending_approval" },
+  ];
+  for (const { status, ...data } of vendors) {
+    const rec = await db.record.create({ data: { appId: "vendors", status, data: JSON.stringify(seal(vendorsDef.fields, data)), createdBy: omar.name } });
+    await audit({ actor: omar, action: "record.create", appId: "vendors", entityType: "Record", entityId: rec.id, after: { status } });
+    if (status === "pending_approval") {
+      await requestApproval({
+        kind: "engine.action", appId: "vendors", entityType: "Record", entityId: rec.id,
+        summary: `Onboard vendor ${data.legalName} (${data.category}, ~${data.annualSpend} USD/yr)`,
+        payload: { appId: "vendors", recordId: rec.id, actionId: "approve", previousStatus: "submitted" },
+        maker: omar, makerReason: "MSA signed, security questionnaire passed", requiredPermission: "vendors.approve",
+      });
+    }
+  }
+  console.log("Seeded users, settings defaults, 14 KYC cases, refunds, flags and vendors.");
   // Change requests (tier-2 self-service): one open, one with a PR + preview waiting on the requester.
   const cr1 = await db.changeRequest.create({
     data: { requesterId: omar.id, requesterName: omar.name, appId: "refunds", title: "Show the customer's previous refunds on the refund page", description: "When I review a refund I open the payments console to check for repeat refunds on the same customer. Show the last 3 refunds (date, amount, status) for the same customer email on the refund detail page so I can spot abuse without leaving the app.", classification: "logic", urgency: "normal" },

@@ -1,10 +1,14 @@
-import type { AppDefinition } from "@/kit/engine/types";
+import { defineApp } from "@/kit/engine/definition";
 import { payments } from "@/kit/connectors";
 
-export const refunds: AppDefinition = {
+export const refunds = defineApp({
   appId: "refunds",
   titleField: "customerName",
   permissions: { read: "refunds.read", create: "refunds.create" },
+  settings: {
+    optionLists: { refundReasons: ["Duplicate charge", "Service not delivered", "Fraud / unauthorized", "Goodwill credit"] },
+    approvalThresholds: { refundAmount: 500 },
+  },
   fields: [
     { name: "customerName", label: "Customer name", type: "text", required: true, inList: true },
     { name: "customerEmail", label: "Customer email", type: "email", required: true, pii: true, inList: true },
@@ -16,7 +20,6 @@ export const refunds: AppDefinition = {
   ],
   statuses: {
     requested: { label: "Requested", tone: "blue" },
-    pending_approval: { label: "Pending approval", tone: "amber" },
     issued: { label: "Issued", tone: "green" },
     rejected: { label: "Rejected", tone: "red" },
   },
@@ -46,4 +49,4 @@ export const refunds: AppDefinition = {
     },
     { id: "reject", label: "Reject", from: ["requested"], to: "rejected", permission: "refunds.approve", tone: "danger", requireReason: true },
   ],
-};
+});

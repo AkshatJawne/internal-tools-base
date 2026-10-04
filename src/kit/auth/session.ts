@@ -2,9 +2,10 @@
 // Replace this module with OIDC (Entra ID / Okta) in production; nothing else needs to change.
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
+import { getSecret } from "@/kit/secrets";
 
 const COOKIE = "itb_session";
-const secret = () => process.env.SESSION_SECRET ?? "dev-only-session-secret-change-me";
+const secret = () => getSecret("SESSION_SECRET"); // throws in production if unset; never falls back to the dev value
 const sign = (v: string) => createHmac("sha256", secret()).update(v).digest("base64url");
 
 export async function createSession(userId: string) {
