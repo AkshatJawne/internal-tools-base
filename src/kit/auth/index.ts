@@ -32,6 +32,14 @@ export async function requirePermission(permission: Permission): Promise<User> {
 export async function requirePagePermission(permission: Permission): Promise<User> {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
-  if (!can(user, permission)) redirect(`/?denied=${encodeURIComponent(permission)}`);
+  if (!can(user, permission)) {
+    await audit({
+      actor: user,
+      action: "access.denied",
+      entityType: "Permission",
+      entityId: permission,
+    });
+    redirect(`/?denied=${encodeURIComponent(permission)}`);
+  }
   return user;
 }
