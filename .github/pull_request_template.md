@@ -6,7 +6,9 @@
 - [ ] Mutations write `audit()` events
 - [ ] Money / regulated decisions / thresholds go through maker-checker
 - [ ] PII fields marked and masked
-- [ ] Connector calls go through `callConnector` and the manifest allowlist
+- [ ] PII stored via `sealPii`/`seal()`; plaintext only inside `revealPii()`
+- [ ] Connector calls go through `callConnector` with the right `dataClass`; manifest + catalog + NetworkPolicy updated for new connectors
+- [ ] `pnpm lint:platform` and `pnpm audit:verify` pass locally
 - [ ] Synthetic data only
 
 ## How I verified

@@ -1,15 +1,18 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { audit, SYSTEM } from "@/kit/audit";
+import { getSecretVersions } from "@/kit/secrets";
 import { ingestVendorEvent, vendorEventSchema } from "@/apps/kyc/ingest";
 
 // Machine-to-machine endpoint: authenticated by HMAC signature instead of a user session.
+// Accepts the current key and (during rotation) the previous one, so keys can be rotated without a vendor outage.
 function validSignature(body: string, sig: string | null) {
   if (!sig) return false;
-  const expected = createHmac("sha256", process.env.KYC_WEBHOOK_SECRET ?? "dev-only-kyc-webhook-secret").update(body).digest("hex");
   const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return getSecretVersions("KYC_WEBHOOK_SECRET").some((key) => {
+    const b = Buffer.from(createHmac("sha256", key).update(body).digest("hex"));
+    return a.length === b.length && timingSafeEqual(a, b);
+  });
 }
 
 export async function POST(req: Request) {

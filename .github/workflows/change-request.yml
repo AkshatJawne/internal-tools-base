@@ -1,0 +1,23 @@
+# Dispatch a change request to Devin from CI. Triggered by the app's `devin` connector via
+# repository_dispatch (see docs/devin/automation.md). The API key never leaves GitHub secrets.
+name: Change request → Devin
+on:
+  repository_dispatch:
+    types: [change_request]
+permissions:
+  contents: read
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open Devin session
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          PROMPT: ${{ github.event.client_payload.prompt }}
+          CR_ID: ${{ github.event.client_payload.changeRequestId }}
+        run: |
+          test -n "$DEVIN_API_KEY" || { echo "DEVIN_API_KEY not configured"; exit 1; }
+          curl -sf -X POST https://api.devin.ai/v1/sessions \
+            -H "Authorization: Bearer $DEVIN_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg p "$PROMPT" --arg t "cr-$CR_ID" '{prompt: $p, title: $t, idempotent: true}')"

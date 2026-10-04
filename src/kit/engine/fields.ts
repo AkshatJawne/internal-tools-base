@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { AppDefinition, RecordData } from "./types";
 import type { FieldDef, Settings } from "@/kit/settings";
-import { maskValue } from "@/kit/pii";
+import { maskValue, sealPii } from "@/kit/pii";
+import { isEncrypted } from "@/kit/crypto";
 
 export function getFields(def: AppDefinition, settings: Settings): FieldDef[] {
   return [...def.fields, ...(settings.customFields[def.appId] ?? []).map((f) => ({ ...f, custom: true }))];
@@ -45,9 +46,30 @@ export function parseForm(fields: FieldDef[], settings: Settings, formData: Form
   return { error: `${label}: ${issue?.message === "Required" ? "is required" : issue?.message}` };
 }
 
-/** Masks PII before data is logged or sent to the browser. */
+const kindOf = (f: FieldDef) => (f.type === "email" ? "email" : "generic");
+const maskKey = (name: string) => `${name}__mask`;
+
+/** Encrypts PII fields before a record is stored, keeping a precomputed mask next to the ciphertext. */
+export function seal(fields: FieldDef[], data: RecordData): RecordData {
+  const out: RecordData = { ...data };
+  for (const f of fields) {
+    const v = out[f.name];
+    if (!f.pii || v == null || v === "" || isEncrypted(v)) continue;
+    const sealed = sealPii(String(v), kindOf(f));
+    out[f.name] = sealed.cipher;
+    out[maskKey(f.name)] = sealed.mask;
+  }
+  return out;
+}
+
+/** Masks PII before data is logged, emitted to automations or sent to the browser. Strips ciphertext and helper keys. */
 export function redact(fields: FieldDef[], data: RecordData): RecordData {
   const out: RecordData = { ...data };
-  for (const f of fields) if (f.pii && out[f.name] != null) out[f.name] = maskValue(String(out[f.name]), f.type === "email" ? "email" : "generic");
+  for (const f of fields) {
+    if (!f.pii || out[f.name] == null) continue;
+    const v = String(out[f.name]);
+    out[f.name] = (out[maskKey(f.name)] as string | undefined) ?? (isEncrypted(v) ? "••••••" : maskValue(v, kindOf(f)));
+  }
+  for (const k of Object.keys(out)) if (k.endsWith("__mask")) delete out[k];
   return out;
 }

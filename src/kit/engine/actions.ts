@@ -10,7 +10,7 @@ import { requestApproval } from "@/kit/approvals";
 import { getSettings } from "@/kit/settings";
 import { errorMessage, type FormState } from "@/kit/action-state";
 import { DEFINITIONS } from "@/apps/definitions";
-import { getFields, parseForm, redact } from "./fields";
+import { getFields, parseForm, redact, seal } from "./fields";
 import { executeRecordAction } from "./execute";
 import type { RecordData } from "./types";
 
@@ -25,7 +25,7 @@ export async function createRecordAction(appId: string, _prev: FormState, formDa
     const parsed = parseForm(fields, settings, formData);
     if (!parsed.data) return { error: parsed.error };
     const rec = await db.record.create({
-      data: { appId, status: def.initialStatus, data: JSON.stringify(parsed.data), createdBy: user.name },
+      data: { appId, status: def.initialStatus, data: JSON.stringify(seal(fields, parsed.data)), createdBy: user.name },
     });
     recordId = rec.id;
     const safe = redact(fields, parsed.data);

@@ -18,8 +18,12 @@ model User {
 }
 
 // Append-only. DB triggers (prisma/audit-triggers.sql) reject UPDATE/DELETE.
+// Hash-chained: hash = sha256(prevHash + canonical event). `pnpm audit:verify` walks the chain.
 model AuditEvent {
   id         String   @id @default(cuid())
+  seq        Int      @unique
+  prevHash   String
+  hash       String
   at         DateTime @default(now())
   actorId    String?
   actorName  String
@@ -83,10 +87,12 @@ model KycCase {
   externalRef    String    @unique
   firstName      String
   lastName       String
-  email          String
+  email          String // encrypted (enc:v1:...) — see src/kit/crypto.ts
+  emailMask      String
   country        String
-  ssn            String
-  dob            String
+  ssn            String // encrypted
+  ssnMask        String
+  dob            String // encrypted
   riskTier       String
   status         String    @default("new") // new | in_review | pending_signoff | approved | rejected | escalated
   assigneeId     String?
@@ -125,7 +131,30 @@ model ConnectorCall {
   operation      String
   appId          String
   status         String // ok | blocked | error
+  dataClass      String   @default("internal") // internal | pii | money
+  policyReason   String?
   request        String
   response       String?
   idempotencyKey String?  @unique
+}
+
+// Ops → engineering change requests. Tier 2 of self-service: a plain-English ask becomes a
+// Devin PR that an engineer reviews. Status transitions are audited.
+model ChangeRequest {
+  id             String   @id @default(cuid())
+  requesterId    String
+  requesterName  String
+  appId          String
+  title          String
+  description    String
+  classification String // ui | logic | money_pii
+  urgency        String // low | normal | high
+  status         String   @default("open") // open | dispatched | pr_open | preview_ready | approved | deployed | declined
+  prompt         String?
+  prUrl          String?
+  previewUrl     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
 }

@@ -12,6 +12,8 @@ const ADMIN_LINKS: { href: string; label: string; permission: Permission }[] = [
   { href: "/admin/forms", label: "Form designer", permission: "settings.read" },
   { href: "/admin/automations", label: "Automations", permission: "settings.read" },
   { href: "/admin/connectors", label: "Connectors & data policy", permission: "admin.read" },
+  { href: "/admin/compliance", label: "Compliance & evidence", permission: "audit.read" },
+  { href: "/requests", label: "Change requests", permission: "requests.create" },
   { href: "/admin/users", label: "Users & roles", permission: "admin.read" },
   { href: "/audit", label: "Audit log", permission: "audit.read" },
 ];

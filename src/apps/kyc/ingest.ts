@@ -5,6 +5,7 @@ import { audit, SYSTEM } from "@/kit/audit";
 import { emit } from "@/kit/automation";
 import { riskTier } from "./risk";
 import { documentSvg } from "./documents";
+import { sealPii } from "@/kit/pii";
 
 export const vendorEventSchema = z.object({
   eventId: z.string().min(1),
@@ -37,7 +38,14 @@ export async function ingestVendorEvent(evt: VendorEvent, opts: { receivedAt?: D
   }
   const { applicant, idScore, sanctionsHit, pepHit, externalRef } = evt.data;
   const tier = riskTier({ idScore, sanctionsHit, pepHit });
-  const fields = { ...applicant, idScore, sanctionsHit, pepHit, riskTier: tier, vendorPayload: JSON.stringify({ idScore, sanctionsHit, pepHit, documents: evt.data.documents }) };
+  // PII is encrypted before it touches the database; only the precomputed masks are stored in clear.
+  const ssn = sealPii(applicant.ssn, "ssn");
+  const email = sealPii(applicant.email, "email");
+  const fields = {
+    firstName: applicant.firstName, lastName: applicant.lastName, country: applicant.country,
+    ssn: ssn.cipher, ssnMask: ssn.mask, email: email.cipher, emailMask: email.mask, dob: sealPii(applicant.dob, "dob").cipher,
+    idScore, sanctionsHit, pepHit, riskTier: tier, vendorPayload: JSON.stringify({ idScore, sanctionsHit, pepHit, documents: evt.data.documents }),
+  };
   const actor = SYSTEM("kyc-vendor");
 
   const existing = await db.kycCase.findUnique({ where: { externalRef } });

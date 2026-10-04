@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   "settings.approve": "Approve sensitive settings changes",
   "admin.read": "View the admin center",
   "users.manage": "Assign security roles",
+  "requests.create": "File a change request for engineering / Devin",
+  "requests.manage": "Triage change requests and dispatch them to Devin",
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -27,31 +29,31 @@ export type Permission = keyof typeof PERMISSIONS;
 export const ROLES = {
   kyc_analyst: {
     label: "KYC analyst",
-    permissions: ["kyc.case.read", "kyc.case.claim", "kyc.case.decide", "pii.reveal", "approvals.read"],
+    permissions: ["kyc.case.read", "kyc.case.claim", "kyc.case.decide", "pii.reveal", "approvals.read", "requests.create"],
   },
   kyc_lead: {
     label: "KYC lead",
     permissions: [
       "kyc.case.read", "kyc.case.claim", "kyc.case.decide", "kyc.case.reassign", "kyc.case.signoff",
-      "pii.reveal", "approvals.read", "audit.read",
+      "pii.reveal", "approvals.read", "audit.read", "requests.create",
     ],
   },
   ops_agent: {
     label: "Ops agent",
-    permissions: ["refunds.read", "refunds.create", "flags.read", "flags.toggle", "pii.reveal", "approvals.read"],
+    permissions: ["refunds.read", "refunds.create", "flags.read", "flags.toggle", "pii.reveal", "approvals.read", "requests.create"],
   },
   ops_approver: {
     label: "Ops approver",
     permissions: [
       "refunds.read", "refunds.approve", "flags.read", "flags.approve_prod", "settings.read",
-      "settings.approve", "pii.reveal", "approvals.read",
+      "settings.approve", "pii.reveal", "approvals.read", "requests.create",
     ],
   },
   ops_admin: {
     label: "Ops admin",
     permissions: [
       "settings.read", "settings.write", "admin.read", "users.manage", "audit.read",
-      "refunds.read", "flags.read", "approvals.read",
+      "refunds.read", "flags.read", "approvals.read", "requests.create", "requests.manage",
     ],
   },
   auditor: {
