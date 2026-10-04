@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "crypto";
 import type { Prisma } from "@prisma/client";
-import { db, withTransaction } from "@/kit/db";
+import { withTransaction } from "@/kit/db";
 
 type Actor = { id: string | null; name: string };
 

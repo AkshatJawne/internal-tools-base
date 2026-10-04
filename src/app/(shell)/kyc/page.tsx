@@ -29,11 +29,11 @@ export default async function KycQueue({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader
-        title="🪪 KYC review queue"
+        title="KYC review queue"
         subtitle="Cases arrive from the KYC vendor webhook. Highest risk and oldest first."
         actions={can(user, "kyc.case.claim") && <form action={claimNextCase}><button className={btn.primary}>Get next case</button></form>}
       />
-      {sp.empty && <div className="mb-4 rounded-lg bg-slate-100 px-4 py-2 text-sm">No unassigned cases right now.</div>}
+      {sp.empty && <div className="mb-4 rounded-lg bg-canvas px-4 py-2 text-sm">No unassigned cases right now.</div>}
       <div className="mb-6 grid grid-cols-4 gap-4">
         <Stat label="Unassigned" value={withSla.filter((c) => c.status === "new").length} />
         <Stat label="Assigned to me" value={withSla.filter((c) => c.assigneeId === user.id && c.status === "in_review").length} />
@@ -60,15 +60,15 @@ export default async function KycQueue({ searchParams }: { searchParams: Promise
         rowKey={(c) => c.id}
         empty="No cases match. Run `pnpm webhooks` to send synthetic vendor events."
         columns={[
-          { key: "ref", label: "Case", render: (c) => <Link className="font-medium text-indigo-600 hover:underline" href={`/kyc/${c.id}`}>{c.externalRef}</Link> },
+          { key: "ref", label: "Case", render: (c) => <Link className="font-medium text-accent hover:underline" href={`/kyc/${c.id}`}>{c.externalRef}</Link> },
           { key: "name", label: "Applicant", render: (c) => `${c.firstName} ${c.lastName}` },
           { key: "risk", label: "Risk", render: (c) => <Badge tone={TIER_TONE[c.riskTier]}>{c.riskTier}</Badge> },
-          { key: "hits", label: "Screening", render: (c) => <span className="space-x-1">{c.sanctionsHit && <Badge tone="red">sanctions</Badge>}{c.pepHit && <Badge tone="purple">PEP</Badge>}{!c.sanctionsHit && !c.pepHit && <span className="text-slate-400">clear</span>}</span> },
+          { key: "hits", label: "Screening", render: (c) => <span className="space-x-1">{c.sanctionsHit && <Badge tone="red">sanctions</Badge>}{c.pepHit && <Badge tone="purple">PEP</Badge>}{!c.sanctionsHit && !c.pepHit && <span className="text-ink-3">clear</span>}</span> },
           { key: "score", label: "ID score", render: (c) => c.idScore },
           { key: "status", label: "Status", render: (c) => <Badge tone={STATUS_TONE[c.status]}>{c.status.replace("_", " ")}</Badge> },
-          { key: "who", label: "Assignee", render: (c) => (c.assigneeId ? users[c.assigneeId] : <span className="text-slate-400">—</span>) },
-          { key: "sla", label: "SLA", render: (c) => (c.sla.state === "done" ? <span className="text-slate-400">done</span> : <Badge tone={SLA_TONE[c.sla.state]}>{timeUntil(c.sla.due)}</Badge>) },
-          { key: "received", label: "Received", render: (c) => <span className="text-slate-500">{fmtDate(c.receivedAt)}</span> },
+          { key: "who", label: "Assignee", render: (c) => (c.assigneeId ? users[c.assigneeId] : <span className="text-ink-3">—</span>) },
+          { key: "sla", label: "SLA", render: (c) => (c.sla.state === "done" ? <span className="text-ink-3">done</span> : <Badge tone={SLA_TONE[c.sla.state]}>{timeUntil(c.sla.due)}</Badge>) },
+          { key: "received", label: "Received", render: (c) => <span className="text-ink-2">{fmtDate(c.receivedAt)}</span> },
         ]}
       />
     </>

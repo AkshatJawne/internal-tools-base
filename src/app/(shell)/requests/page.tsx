@@ -23,16 +23,16 @@ export default async function Requests() {
         rowKey={(r) => r.id}
         empty="No requests yet"
         columns={[
-          { key: "t", label: "Request", render: (r) => <Link href={`/requests/${r.id}`} className="font-medium text-indigo-700">{r.title}</Link> },
+          { key: "t", label: "Request", render: (r) => <Link href={`/requests/${r.id}`} className="font-medium text-accent">{r.title}</Link> },
           { key: "a", label: "App", render: (r) => appName(r.appId) },
           { key: "c", label: "Class", render: (r) => <span className="text-xs">{CLASSIFICATIONS[r.classification as Classification]?.label ?? r.classification}</span> },
           { key: "u", label: "Urgency", render: (r) => <Badge tone={r.urgency === "high" ? "red" : r.urgency === "low" ? "gray" : "blue"}>{r.urgency}</Badge> },
           { key: "s", label: "Status", render: (r) => <Badge tone={REQUEST_STATUSES[r.status]?.tone}>{REQUEST_STATUSES[r.status]?.label ?? r.status}</Badge> },
-          { key: "by", label: "Requester", render: (r) => <span className="text-slate-600">{r.requesterName}<div className="text-xs text-slate-400">{fmtDate(r.createdAt)}</div></span> },
+          { key: "by", label: "Requester", render: (r) => <span className="text-ink-2">{r.requesterName}<div className="text-xs text-ink-3">{fmtDate(r.createdAt)}</div></span> },
         ]}
       />
       <Card title="How a request becomes a change" className="mt-6">
-        <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-ink">
           <li><strong>Tier 1 — no request needed:</strong> reason codes, SLA hours, refund reasons, form fields and automation rules are edited directly in Admin, audited, with a second approver for thresholds.</li>
           <li><strong>Tier 2 — this page:</strong> anything that needs code. Ops admin dispatches it to Devin with a prompt that carries the conventions and guardrails (shown on each request). Devin opens one PR on a <code>devin/cr-*</code> branch; it has no production credentials.</li>
           <li>CI runs lint, typecheck, build, <code>permission-lint</code>, <code>audit-lint</code> and <code>dep-lint</code>. CODEOWNERS routes the review: one engineer for UI, the app owner for logic, plus security for anything touching money, PII or permissions.</li>

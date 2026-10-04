@@ -63,6 +63,17 @@ export const ROLES = {
       "refunds.read", "flags.read", "vendors.read", "approvals.read", "requests.create", "requests.manage",
     ],
   },
+  // Demo/platform owner: broad access for walkthroughs. Maker-checker still applies: no one approves their own request.
+  platform_owner: {
+    label: "Platform owner",
+    permissions: [
+      "kyc.case.read", "kyc.case.claim", "kyc.case.decide", "kyc.case.reassign", "kyc.case.signoff", "pii.reveal",
+      "refunds.read", "refunds.create", "refunds.approve", "flags.read", "flags.toggle", "flags.approve_prod",
+      "vendors.read", "vendors.create", "vendors.review", "vendors.approve",
+      "approvals.read", "audit.read", "settings.read", "settings.write", "settings.approve", "admin.read", "users.manage",
+      "requests.create", "requests.manage",
+    ],
+  },
   auditor: {
     label: "Auditor (read-only)",
     permissions: ["audit.read", "admin.read", "settings.read", "kyc.case.read", "refunds.read", "flags.read", "vendors.read"],

@@ -1,5 +1,5 @@
 import type { ApprovalHandler } from "@/kit/approvals";
-import { db, withTransaction } from "@/kit/db";
+import { withTransaction } from "@/kit/db";
 import { audit } from "@/kit/audit";
 import { applyDecision, type Decision } from "./decision";
 
