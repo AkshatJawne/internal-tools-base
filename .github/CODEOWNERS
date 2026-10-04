@@ -1,0 +1,6 @@
+# Platform kit, schema and anything touching money or PII needs platform + security review.
+*                         @AkshatJawne
+/src/kit/                 @AkshatJawne
+/prisma/                  @AkshatJawne
+/src/apps/refunds/        @AkshatJawne
+/src/apps/kyc/            @AkshatJawne
