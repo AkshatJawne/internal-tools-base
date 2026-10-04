@@ -20,11 +20,11 @@ export default async function FormDesigner() {
           const app = getApp(def.appId)!;
           const custom = settings.customFields[def.appId] ?? [];
           return (
-            <Card key={def.appId} title={<span>{app.icon} {app.name}</span>} actions={<Link href={`/apps/${def.appId}/new`} className="text-sm text-indigo-600">Preview form →</Link>}>
+            <Card key={def.appId} title={app.name} actions={<Link href={`/apps/${def.appId}/new`} className="text-sm text-accent">Preview form →</Link>}>
               <div className="grid gap-6 lg:grid-cols-2">
                 <table className="w-full text-sm">
-                  <thead><tr className="text-left text-xs uppercase text-slate-500"><th className="pb-1">Field</th><th>Type</th><th>Source</th><th /></tr></thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <thead><tr className="text-left text-xs uppercase text-ink-2"><th className="pb-1">Field</th><th>Type</th><th>Source</th><th /></tr></thead>
+                  <tbody className="divide-y divide-line-2">
                     {def.fields.map((f) => (
                       <tr key={f.name}><td className="py-1.5">{f.label} {f.pii && <Badge tone="purple">PII</Badge>}</td><td>{f.type}</td><td><Badge>code 🔒</Badge></td><td /></tr>
                     ))}
@@ -42,14 +42,14 @@ export default async function FormDesigner() {
                   </tbody>
                 </table>
                 {canEdit && (
-                  <ActionForm action={addCustomFieldAction} className="space-y-2 rounded-lg bg-slate-50 p-3">
+                  <ActionForm action={addCustomFieldAction} className="space-y-2 rounded-lg bg-canvas p-3">
                     <input type="hidden" name="appId" value={def.appId} />
                     <div className="text-sm font-medium">Add a field</div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div><label className={label}>Label</label><input name="label" required className={input} placeholder="e.g. Ticket link" /></div>
-                      <div><label className={label}>Type</label><select name="type" className={input}>{FIELD_TYPES.map((t) => <option key={t}>{t}</option>)}</select></div>
+                      <div><label className={label}>Label</label><input name="label" required className={`${input} w-full`} placeholder="e.g. Ticket link" /></div>
+                      <div><label className={label}>Type</label><select name="type" className={`${input} w-full`}>{FIELD_TYPES.map((t) => <option key={t}>{t}</option>)}</select></div>
                     </div>
-                    <div><label className={label}>Options (for select, comma-separated)</label><input name="options" className={input} /></div>
+                    <div><label className={label}>Options (for select, comma-separated)</label><input name="options" className={`${input} w-full`} /></div>
                     <div className="flex gap-4 text-sm">
                       <label className="flex items-center gap-1"><input type="checkbox" name="required" /> required</label>
                       <label className="flex items-center gap-1"><input type="checkbox" name="inList" defaultChecked /> show in list</label>

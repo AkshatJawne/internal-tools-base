@@ -17,7 +17,7 @@ export default async function Users() {
         rows={users}
         rowKey={(u) => u.id}
         columns={[
-          { key: "n", label: "User", render: (u) => <><div className="font-medium">{u.name}</div><div className="text-xs text-slate-500">{u.email}</div></> },
+          { key: "n", label: "User", render: (u) => <><div className="font-medium">{u.name}</div><div className="text-xs text-ink-2">{u.email}</div></> },
           { key: "t", label: "Team", render: (u) => u.team },
           {
             key: "r",
@@ -39,10 +39,10 @@ export default async function Users() {
         <div className="overflow-x-auto">
           <table className="text-xs">
             <thead><tr><th className="pr-4 text-left">Permission</th>{roles.map((r) => <th key={r} className="px-2">{ROLES[r].label}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-2">
               {(Object.keys(PERMISSIONS) as Permission[]).map((p) => (
                 <tr key={p}>
-                  <td className="py-1 pr-4"><code>{p}</code> <span className="text-slate-400">{PERMISSIONS[p]}</span></td>
+                  <td className="py-1 pr-4"><code>{p}</code> <span className="text-ink-3">{PERMISSIONS[p]}</span></td>
                   {roles.map((r) => <td key={r} className="text-center">{(ROLES[r].permissions as readonly string[]).includes(p) ? "✓" : ""}</td>)}
                 </tr>
               ))}

@@ -33,15 +33,13 @@ pnpm webhooks      # optional: posts 40 signed vendor events + 2 replays + 1 for
 
 ## Demo path
 
-| Sign in as | Try |
-|---|---|
-| Alice Analyst (KYC analyst) | KYC queue → **Get next case** → reveal SSN (reason required) → approve a high-risk case → it waits for sign-off |
-| Lena Lead (KYC lead) | Open the same case → **Sign off**. Check the audit trail on the case |
-| Omar Ops (ops agent) | Refunds → New → create a $7,500 refund → **Request: Issue refund** (over threshold) |
-| Priya Approver | Approvals → approve it. Payment connector is called once with an idempotency key |
-| Omar Ops again | Change requests → **New request** ("show the customer's previous refunds") |
-| Adam Admin (ops admin) | Change requests → open Omar's → **Send to Devin** (see the generated prompt). Connectors & data policy → **Policy test**: Refunds → slack with PII → blocked, logged, audited. Form designer, Settings (threshold needs Priya), Automations, Users & roles |
-| Audrey Auditor | Compliance & evidence → **Download pack** for CC6.3; Audit log shows "chain verified". Read-only: no PII reveal, no actions |
+Sign in with the demo account shown on the sign-in page: `demo@acmepay.example` / `acmepay-demo` (role: Platform owner, sees every app and platform page). Every seeded user has the same password, so you can also sign in as a single-role persona (e.g. `omar@acmepay.example`, `priya@acmepay.example`, `audrey@acmepay.example`) to show what a narrower role sees and is refused.
+
+1. **Home**: apps on top of one shared platform, with live numbers.
+2. **KYC review queue** (custom code on the kit): Get next case, reveal the SSN (reason required, audited), decide; a second person signs off.
+3. **Refunds** (generated from `src/apps/refunds/definition.ts`): create a refund above the threshold; it waits in Approvals. The requester cannot approve it; sign in as Priya to approve. The payments connector is called once with an idempotency key.
+4. **Platform**: Users and roles (deny by default), Audit log (chain verified), Compliance (download an evidence pack), Connectors (policy test: Refunds to Slack with PII is blocked), Settings and Form designer (ops-editable, audited).
+5. **Change requests**: open a request, Send to Devin, read the generated prompt; the PR and preview URL come back on the request.
 
 To see tamper evidence: `sqlite3 prisma/dev.db "PRAGMA writable_schema=1; DROP TRIGGER audit_event_no_update; UPDATE AuditEvent SET reason='edited' WHERE seq=5"` then `pnpm audit:verify` → `BROKEN at seq 5` (and the Audit page shows it).
 

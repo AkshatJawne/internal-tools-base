@@ -33,7 +33,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
 
   return (
     <>
-      <Link href={`/apps/${appId}`} className="text-sm text-indigo-600">← {app.name}</Link>
+      <Link href={`/apps/${appId}`} className="text-sm text-accent">← {app.name}</Link>
       <PageHeader title={<span className="flex items-center gap-2">{String(data[def.titleField] ?? rec.id)} <Badge tone={status?.tone}>{status?.label ?? rec.status}</Badge></span>} subtitle={`Created ${fmtDate(rec.createdAt)} by ${rec.createdBy}`} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -43,7 +43,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
                 const v = data[f.name];
                 return (
                   <Field key={f.name} label={f.label}>
-                    {v == null || v === "" ? <span className="text-slate-400">—</span>
+                    {v == null || v === "" ? <span className="text-ink-3">—</span>
                       : f.pii ? <PiiField entityType="Record" entityId={rec.id} field={f.name} masked={String(v)} canReveal={can(user, "pii.reveal")} />
                       : f.type === "money" ? fmtMoney(Number(v), String(data.currency ?? "USD"))
                       : String(v)}
@@ -59,7 +59,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
           {pending && (
             <Card title="Waiting for approval">
               <p className="text-sm">{pending.summary}</p>
-              <p className="mt-1 text-xs text-slate-500">Requested by {pending.makerName}. Needs <code>{pending.requiredPermission}</code> and a different person.</p>
+              <p className="mt-1 text-xs text-ink-2">Requested by {pending.makerName}. Needs <code>{pending.requiredPermission}</code> and a different person.</p>
               <Link href="/approvals" className={`${btn.secondary} mt-3`}>Open approvals</Link>
             </Card>
           )}
@@ -68,7 +68,7 @@ export default async function RecordPage({ params }: { params: Promise<{ appId: 
             return (
               <Card key={a.id} title={a.label}>
                 <ActionForm action={runRecordAction.bind(null, appId, rec.id, a.id)} className="space-y-2">
-                  {(a.requireReason || gated) && <input name="reason" placeholder="Reason (required)" className={input} />}
+                  {(a.requireReason || gated) && <input name="reason" placeholder="Reason (required)" className={`${input} w-full`} />}
                   {gated && <p className="text-xs text-amber-700">Needs approval from someone with <code>{a.approval!.permission}</code>.</p>}
                   <button className={a.tone === "danger" ? btn.danger : btn.primary}>{gated ? `Request: ${a.label}` : a.label}</button>
                 </ActionForm>

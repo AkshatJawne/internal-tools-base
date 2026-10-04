@@ -8,7 +8,10 @@ export function NavLink({ href, children }: { href: string; children: ReactNode 
   const path = usePathname();
   const active = href === "/" ? path === "/" : path === href || path.startsWith(href + "/");
   return (
-    <Link href={href} className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm ${active ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800/60 hover:text-white"}`}>
+    <Link
+      href={href}
+      className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-[13px] ${active ? "bg-white font-medium text-ink shadow-[0_0_0_1px_var(--color-line)]" : "text-ink-2 hover:bg-white/70 hover:text-ink"}`}
+    >
       {children}
     </Link>
   );

@@ -15,6 +15,7 @@ model User {
   role   String
   team   String
   active Boolean @default(true)
+  passwordHash String? // DEV ONLY local sign-in; null once OIDC is wired
 }
 
 // Append-only. DB triggers (prisma/audit-triggers.sql) reject UPDATE/DELETE.

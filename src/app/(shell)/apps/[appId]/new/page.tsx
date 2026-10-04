@@ -22,7 +22,7 @@ export default async function NewRecord({ params }: { params: Promise<{ appId: s
   const settings = await getSettings();
   return (
     <>
-      <Link href={`/apps/${appId}`} className="text-sm text-indigo-600">← {app.name}</Link>
+      <Link href={`/apps/${appId}`} className="text-sm text-accent">← {app.name}</Link>
       <PageHeader title={`New ${app.name.toLowerCase().replace(/s$/, "")}`} subtitle="Form generated from the app definition plus fields ops added in the Form designer. Validated on the server with zod." />
       <Card className="max-w-2xl">
         <ActionForm action={createRecordAction.bind(null, appId)} className="grid gap-4 sm:grid-cols-2">
