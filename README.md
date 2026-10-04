@@ -22,13 +22,26 @@ All data is synthetic. All connectors are mocks; nothing makes network calls.
 
 ## Run it
 
+You need Node.js 20.19 or newer (tested on 24.19, `.nvmrc` says 24) and pnpm 9 (tested on 9.15.0). No database server, no sqlite3 CLI and no external credentials are needed; the demo uses a local SQLite file and mock connectors.
+
 ```bash
+# Node and pnpm, if you do not have them
+nvm install 24 && nvm use 24          # or any Node >= 20.19
+corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+git clone https://github.com/AkshatJawne/internal-tools-base.git
+cd internal-tools-base
 pnpm install
-pnpm db:reset      # creates .env from .env.example, SQLite DB, triggers, seed data
-pnpm dev           # http://localhost:3000
-pnpm audit:verify  # recompute the audit hash chain
-pnpm lint:platform # permission-lint, audit-lint, dep-lint (also run in CI)
-pnpm webhooks      # optional: posts 40 signed vendor events + 2 replays + 1 forged
+pnpm db:reset      # creates .env from .env.example, then resets the local SQLite DB (schema, triggers, seed data). Destructive on purpose.
+pnpm dev           # leave this running, then open http://localhost:3000
+```
+
+In a second terminal in the same directory:
+
+```bash
+pnpm audit:verify  # recompute the audit hash chain; prints "audit chain OK: <n> events, head <hash>"
+pnpm lint:platform # permission-lint, audit-lint, boundary-lint, dep-lint (the same checks CI runs)
+pnpm webhooks      # optional: posts 40 signed vendor events, 2 replays and 1 forged event to the running server (set APP_URL if not on :3000)
 ```
 
 ## Demo path
@@ -36,23 +49,33 @@ pnpm webhooks      # optional: posts 40 signed vendor events + 2 replays + 1 for
 Sign in with the demo account shown on the sign-in page: `demo@acmepay.example` / `acmepay-demo` (role: Platform owner, sees every app and platform page). Every seeded user has the same password, so you can also sign in as a single-role persona (e.g. `omar@acmepay.example`, `priya@acmepay.example`, `audrey@acmepay.example`) to show what a narrower role sees and is refused.
 
 1. **Home**: apps on top of one shared platform, with live numbers.
-2. **KYC review queue** (custom code on the kit): Get next case, reveal the SSN (reason required, audited), decide; a second person signs off.
-3. **Refunds** (generated from `src/apps/refunds/definition.ts`): create a refund above the threshold; it waits in Approvals. The requester cannot approve it; sign in as Priya to approve. The payments connector is called once with an idempotency key.
-4. **Platform**: Users and roles (deny by default), Audit log (chain verified), Compliance (download an evidence pack), Connectors (policy test: Refunds to Slack with PII is blocked), Settings and Form designer (ops-editable, audited).
-5. **Change requests**: open a request, Send to Devin, read the generated prompt; the PR and preview URL come back on the request.
+2. **KYC review queue** (custom code on the kit): click **Get next case**. Click **Reveal** next to the SSN; an empty reason is refused, a reason reveals the value and writes an audit event. Pick a decision and a matching **Reason code**, then **Submit decision**. High-risk cases (the seeded rule) need a second person: sign out, sign in as `lena@acmepay.example`, open the same case, enter a **Sign-off note** and click **Sign off**. The person who decided cannot sign off. Sign back in as `demo@acmepay.example`.
+3. **Refunds** (generated from `src/apps/refunds/definition.ts`): click **Create**, enter an amount above 500 (the seeded threshold) and save. The refund is **Requested**. Open it, enter a reason and click **Request: Issue refund**; it becomes **Pending approval** and appears in **Approvals**. The requester sees it there but gets no approve button. Sign out, sign in as `priya@acmepay.example`, open **Approvals**, add a note and approve; the refund becomes **Issued**. Sign back in as `demo@acmepay.example` and open **Connectors**: one payments call, with the idempotency key `refund:<id>`.
+4. **Platform** (sidebar group): **Users and roles** (deny by default), **Audit log** (badge reads **chain verified**), **Compliance** (click **Download pack** next to a control, for example SOC 2 CC6.1), **Connectors** then **Policy test (DLP probe)** with app Refunds, connector slack, payload PII, click **Probe**; the call is blocked, logged and audited. **Settings** and **Form designer** are editable by the demo owner; every edit needs a reason and lands in the audit log. Changing an approval threshold itself needs a second approver.
+5. **Change requests**: click **New request**, fill it in, **Submit request**, then **Send to Devin** and read the generated prompt (conventions included, customer data excluded). In this prototype the Devin connector is a mock: the status goes to **Devin working** and no real session, PR or preview is created. The seeded example request shows what a finished one looks like, and an admin can enter PR and preview URLs by hand. The real adapter is described in `docs/devin/automation.md`.
 
-To see tamper evidence: `sqlite3 prisma/dev.db "PRAGMA writable_schema=1; DROP TRIGGER audit_event_no_update; UPDATE AuditEvent SET reason='edited' WHERE seq=5"` then `pnpm audit:verify` → `BROKEN at seq 5` (and the Audit page shows it).
+To see tamper evidence, edit an audit row directly (this uses the Prisma CLI you already have, no sqlite3 needed):
 
-## Adding app #4
+```bash
+pnpm exec prisma db execute --schema prisma/schema.prisma --stdin <<'SQL'
+PRAGMA writable_schema=1;
+DROP TRIGGER audit_event_no_update;
+UPDATE AuditEvent SET reason='edited' WHERE seq=5;
+SQL
+pnpm audit:verify   # exits 1 with "audit chain BROKEN at seq 5"; the Audit log page shows "chain BROKEN at #5"
+pnpm db:reset       # restore (stop pnpm dev first, then start it again)
+```
 
-See `.agents/skills/new-internal-app/SKILL.md`. For a typical CRUD/approval tool it is exactly four edits, and `pnpm lint:platform` fails if they disagree:
+## Adding another generated app
 
-1. `src/apps/<id>/definition.ts` — `defineApp({...})`: fields (mark PII), statuses, actions, approval rule, and the ops-tunable defaults it needs (`settings.optionLists` / `approvalThresholds`, which appear in Admin → Settings automatically).
+See `.agents/skills/new-internal-app/SKILL.md` (this is what Devin reads). Vendor onboarding (`src/apps/vendors`) is the worked example and is already app #4. A typical list/form/approval tool is four edits; `pnpm lint:platform` checks that the registry, manifest and permissions agree, and `pnpm typecheck` catches the rest. Custom screens or a new connector need more files.
+
+1. `src/apps/<id>/definition.ts` — `defineApp({...})` with `appId`, `titleField`, `permissions`, `fields` (mark PII), `statuses`, `initialStatus`, `actions` and an approval rule on the action that needs one. Ops-tunable defaults go in `settings.optionLists` / `settings.approvalThresholds` and appear under Platform → Settings automatically.
 2. `src/apps/definitions.ts` — add it to the registry.
-3. `src/apps/manifest.ts` — name, route, read permission, owner, connector allowlist.
+3. `src/apps/manifest.ts` — `id`, `name`, `description`, `route: "/apps/<id>"`, `permission` (the definition's read permission), `kind: "generated"`, `owner`, `icon`, connector allowlist.
 4. `src/kit/rbac.ts` — its permissions and which roles get them (deny by default, so this one kit edit is deliberate).
 
-Vendor onboarding (`src/apps/vendors`) is the worked example: ~50 lines, no new auth, audit, approval, PII or settings code. Auth, audit, approvals, PII masking, connectors, automations and admin screens come from the kit.
+Vendor onboarding is about 50 lines across those four files, with no new auth, audit, approval, PII or settings code. Auth, audit, approvals, PII masking, connectors, automations and admin screens come from the kit.
 
 ## Layout
 
