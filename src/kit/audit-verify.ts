@@ -13,5 +13,9 @@ export async function verifyAuditChain(): Promise<ChainStatus> {
     if (hashEvent(e) !== e.hash) return { ok: false, count: events.length, head: null, brokenAt: e.seq, problem: "stored hash does not match event contents" };
     prev = e.hash;
   }
-  return { ok: true, count: events.length, head: events.at(-1)?.hash ?? null };
+  const last = events.at(-1);
+  const head = await db.auditChainHead.findUnique({ where: { id: 1 } });
+  if ((head?.seq ?? 0) !== (last?.seq ?? 0) || (head?.hash ?? GENESIS_HASH) !== (last?.hash ?? GENESIS_HASH))
+    return { ok: false, count: events.length, head: null, brokenAt: last?.seq, problem: "chain head row does not match the last event" };
+  return { ok: true, count: events.length, head: last?.hash ?? null };
 }

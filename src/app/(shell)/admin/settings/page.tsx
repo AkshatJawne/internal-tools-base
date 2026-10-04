@@ -6,6 +6,8 @@ import { updateSettingAction } from "@/kit/admin-actions";
 import { Badge, Card, PageHeader, btn, input, label } from "@/kit/ui";
 import { ActionForm } from "@/kit/ui/ActionForm";
 
+const humanize = (k: string) => k.replace(/([A-Z])/g, " $1").toLowerCase().replace(/^./, (c) => c.toUpperCase());
+
 function Section({ k, canEdit, children }: { k: SettingKey; canEdit: boolean; children: React.ReactNode }) {
   const meta = SETTING_META[k];
   return (
@@ -40,8 +42,11 @@ export default async function SettingsPage() {
       )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Section k="approvalThresholds" canEdit={canEdit}>
-          <label className={label}>Refunds above this amount need an approver (USD)</label>
-          <input name="refundAmount" type="number" min={0} defaultValue={s.approvalThresholds.refundAmount} className={`${input} w-full`} />
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(s.approvalThresholds).map(([k, v]) => (
+              <div key={k}><label className={label}>{humanize(k)}</label><input name={k} type="number" min={0} defaultValue={v} className={`${input} w-full`} /></div>
+            ))}
+          </div>
         </Section>
         <Section k="slaHours" canEdit={canEdit}>
           <div className="grid grid-cols-3 gap-2">
@@ -57,14 +62,17 @@ export default async function SettingsPage() {
             ))}
           </div>
         </Section>
-        <Section k="refundReasons" canEdit={canEdit}>
-          <label className={label}>One per line</label>
-          <textarea name="values" rows={4} defaultValue={s.refundReasons.join("\n")} className={`${input} w-full`} />
+        <Section k="optionLists" canEdit={canEdit}>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(s.optionLists).map(([k, v]) => (
+              <div key={k}><label className={label}>{humanize(k)} (one per line)</label><textarea name={k} rows={4} defaultValue={v.join("\n")} className={`${input} w-full text-xs`} /></div>
+            ))}
+          </div>
         </Section>
         <Section k="kycReasonCodes" canEdit={canEdit}>
           <div className="grid grid-cols-3 gap-2">
             {(["approve", "reject", "escalate"] as const).map((d) => (
-              <div key={d}><label className={label}>{d}</label><textarea name={d} rows={5} defaultValue={s.kycReasonCodes[d].join("\n")} className={`${input} text-xs`} /></div>
+              <div key={d}><label className={label}>{d}</label><textarea name={d} rows={5} defaultValue={s.kycReasonCodes[d].join("\n")} className={`${input} w-full text-xs`} /></div>
             ))}
           </div>
         </Section>

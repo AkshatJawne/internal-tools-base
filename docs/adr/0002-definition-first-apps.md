@@ -7,4 +7,6 @@
 
 **Alternatives rejected.** A drag-and-drop builder (months of work to reach parity with Studio; our builders are engineers); writing every app by hand (loses the Power Apps speed argument).
 
+**Amended 2026-10.** Definitions are built with `defineApp()`, which validates them at module load and owns the `pending_approval` status, and they declare their own ops-tunable defaults (`settings.optionLists`, `settings.approvalThresholds`) instead of those living in `kit/settings.ts`. Approval hooks receive redacted data; effects receive stored (ciphertext) data. `boundary-lint` checks that manifest and definitions agree. Net: a new generated app touches `src/apps/<id>/definition.ts`, the two registries and `rbac.ts`, and nothing else in the kit.
+
 **Consequences.** Two tiers, not three. Delegation-style correctness hazards (Power Apps' 500/2,000-row caps) do not exist because filtering is server-side SQL.

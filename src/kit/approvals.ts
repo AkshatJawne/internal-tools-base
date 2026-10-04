@@ -1,5 +1,5 @@
-import type { ApprovalRequest, User } from "@prisma/client";
-import { db } from "@/kit/db";
+import type { ApprovalRequest, Prisma, User } from "@prisma/client";
+import { db, withTransaction } from "@/kit/db";
 import { audit } from "@/kit/audit";
 import { can, ForbiddenError, type Permission } from "@/kit/rbac";
 
@@ -19,8 +19,9 @@ export async function requestApproval(input: {
   maker: User;
   makerReason?: string | null;
   requiredPermission: Permission;
-}) {
-  const req = await db.approvalRequest.create({
+}, tx?: Prisma.TransactionClient): Promise<ApprovalRequest> {
+  if (!tx) return withTransaction((t) => requestApproval(input, t));
+  const req = await tx.approvalRequest.create({
     data: {
       kind: input.kind,
       appId: input.appId,
@@ -34,15 +35,18 @@ export async function requestApproval(input: {
       requiredPermission: input.requiredPermission,
     },
   });
-  await audit({
-    actor: input.maker,
-    action: "approval.requested",
-    appId: input.appId,
-    entityType: input.entityType,
-    entityId: input.entityId,
-    after: { approvalId: req.id, kind: input.kind, summary: input.summary, needs: input.requiredPermission },
-    reason: input.makerReason,
-  });
+  await audit(
+    {
+      actor: input.maker,
+      action: "approval.requested",
+      appId: input.appId,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      after: { approvalId: req.id, kind: input.kind, summary: input.summary, needs: input.requiredPermission },
+      reason: input.makerReason,
+    },
+    tx,
+  );
   return req;
 }
 
@@ -67,27 +71,31 @@ export async function decideApproval(input: {
   }
   if (!can(checker, req.requiredPermission as Permission)) throw new ForbiddenError(`Missing permission: ${req.requiredPermission}`);
   if (input.reason.trim().length < 3) throw new Error("A reason is required");
+  const handler = input.handlers[req.kind];
+  if (!handler) throw new Error(`No handler for approval kind ${req.kind}`); // resolve before claiming, or the claim is lost
 
   const status = input.decision === "approve" ? "approved" : "rejected";
-  const claimed = await db.approvalRequest.updateMany({
-    where: { id: req.id, status: "pending" },
-    data: { status, checkerId: checker.id, checkerName: checker.name, decisionReason: input.reason, decidedAt: new Date() },
+  await withTransaction(async (tx) => {
+    const claimed = await tx.approvalRequest.updateMany({
+      where: { id: req.id, status: "pending" },
+      data: { status, checkerId: checker.id, checkerName: checker.name, decisionReason: input.reason, decidedAt: new Date() },
+    });
+    if (claimed.count !== 1) throw new Error("Someone else already decided this request");
+    await audit(
+      {
+        actor: checker,
+        action: `approval.${status}`,
+        appId: req.appId,
+        entityType: req.entityType,
+        entityId: req.entityId,
+        before: { status: "pending" },
+        after: { approvalId: req.id, status, maker: req.makerName },
+        reason: input.reason,
+      },
+      tx,
+    );
   });
-  if (claimed.count !== 1) throw new Error("Someone else already decided this request");
 
-  await audit({
-    actor: checker,
-    action: `approval.${status}`,
-    appId: req.appId,
-    entityType: req.entityType,
-    entityId: req.entityId,
-    before: { status: "pending" },
-    after: { approvalId: req.id, status, maker: req.makerName },
-    reason: input.reason,
-  });
-
-  const handler = input.handlers[req.kind];
-  if (!handler) throw new Error(`No handler for approval kind ${req.kind}`);
   const payload = JSON.parse(req.payload) as Record<string, unknown>;
   try {
     if (input.decision === "approve") {

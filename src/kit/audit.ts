@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "crypto";
-import { Prisma } from "@prisma/client";
-import { db } from "@/kit/db";
+import type { Prisma } from "@prisma/client";
+import { withTransaction } from "@/kit/db";
 
 type Actor = { id: string | null; name: string };
 
@@ -56,10 +56,19 @@ export function hashEvent(e: HashedFields): string {
 /**
  * The only way to write audit events. There is deliberately no update or delete helper.
  * Each event links to the previous one by hash (tamper-evident), on top of the DB triggers (tamper-resistant).
+ *
+ * Always runs inside a transaction: pass the `tx` of the business mutation so state and its audit event
+ * commit or roll back together; without one, `audit()` opens its own.
+ *
+ * Writers serialise on the single `AuditChainHead` row. The first statement is a blind write to that row
+ * (upsert + increment), so a second writer queues on the row lock instead of racing: no read-then-write
+ * upgrade (which SQLite refuses) and no constraint error (which would abort a Postgres transaction).
+ * The unique index on `seq` stays as an independent second guard.
  */
-export async function audit(e: AuditInput, tx?: Prisma.TransactionClient) {
-  const client = tx ?? db;
-  const base = {
+export async function audit(e: AuditInput, tx?: Prisma.TransactionClient): Promise<{ id: string; seq: number; hash: string }> {
+  if (!tx) return withTransaction((t) => audit(e, t));
+  const head = await tx.auditChainHead.upsert({ where: { id: 1 }, create: { id: 1, seq: 1, hash: GENESIS_HASH }, update: { seq: { increment: 1 } } });
+  const fields: HashedFields = {
     actorId: e.actor.id,
     actorName: e.actor.name,
     action: e.action,
@@ -70,18 +79,13 @@ export async function audit(e: AuditInput, tx?: Prisma.TransactionClient) {
     after: json(e.after),
     reason: e.reason ?? null,
     requestId: await requestId(),
+    seq: head.seq,
+    prevHash: head.hash, // still the previous event's hash: only seq moved above
+    at: new Date(),
   };
-  for (let attempt = 0; ; attempt++) {
-    const head = await client.auditEvent.findFirst({ orderBy: { seq: "desc" }, select: { seq: true, hash: true } });
-    const fields: HashedFields = { ...base, seq: (head?.seq ?? 0) + 1, prevHash: head?.hash ?? GENESIS_HASH, at: new Date() };
-    try {
-      return await client.auditEvent.create({ data: { ...fields, hash: hashEvent(fields) } });
-    } catch (err) {
-      // Two writers raced for the same seq: the unique index rejects one; re-read the head and retry.
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002" && attempt < 5) continue;
-      throw err;
-    }
-  }
+  const hash = hashEvent(fields);
+  await tx.auditChainHead.update({ where: { id: 1 }, data: { hash } });
+  return tx.auditEvent.create({ data: { ...fields, hash }, select: { id: true, seq: true, hash: true } });
 }
 
 export const SYSTEM = (name: string): Actor => ({ id: null, name: `system:${name}` });

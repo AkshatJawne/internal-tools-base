@@ -13,18 +13,18 @@ import { DEFINITIONS } from "@/apps/definitions";
 
 const lines = (v: FormDataEntryValue | null) => String(v ?? "").split("\n").map((s) => s.trim()).filter(Boolean);
 
-function valueFromForm(key: SettingKey, fd: FormData): unknown {
+function valueFromForm(key: SettingKey, fd: FormData, current: Settings): unknown {
   switch (key) {
     case "kycReasonCodes":
       return { approve: lines(fd.get("approve")), reject: lines(fd.get("reject")), escalate: lines(fd.get("escalate")) };
-    case "refundReasons":
-      return lines(fd.get("values"));
     case "slaHours":
       return { low: Number(fd.get("low")), medium: Number(fd.get("medium")), high: Number(fd.get("high")) };
     case "makerCheckerTiers":
       return fd.getAll("tiers").map(String);
     case "approvalThresholds":
-      return { refundAmount: Number(fd.get("refundAmount")) };
+      return Object.fromEntries(Object.keys(current.approvalThresholds).map((k) => [k, Number(fd.get(k))]));
+    case "optionLists":
+      return Object.fromEntries(Object.keys(current.optionLists).map((k) => [k, lines(fd.get(k))]));
     default:
       throw new Error("Not editable here");
   }
@@ -33,11 +33,12 @@ function valueFromForm(key: SettingKey, fd: FormData): unknown {
 export async function updateSettingAction(key: SettingKey, _prev: FormState, fd: FormData): Promise<FormState> {
   try {
     const user = await requirePermission("settings.write");
-    const parsed = settingsSchema.shape[key].safeParse(valueFromForm(key, fd));
+    const current = await getSettings();
+    const parsed = settingsSchema.shape[key].safeParse(valueFromForm(key, fd, current));
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid value" };
     const reason = String(fd.get("reason") ?? "").trim() || null;
     if (SETTING_META[key].requiresApproval) {
-      const before = (await getSettings())[key];
+      const before = current[key];
       await requestApproval({
         kind: "settings.update",
         appId: "platform",

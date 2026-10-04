@@ -13,6 +13,10 @@ export const PERMISSIONS = {
   "flags.read": "View feature flags",
   "flags.toggle": "Request flag changes",
   "flags.approve_prod": "Approve production flag changes",
+  "vendors.read": "View vendor onboarding",
+  "vendors.create": "Submit a new vendor",
+  "vendors.review": "Approve or reject vendors",
+  "vendors.approve": "Second approval for vendors above the spend threshold",
   "approvals.read": "Open the approvals inbox",
   "audit.read": "Read the audit log",
   "settings.read": "View platform settings",
@@ -40,20 +44,23 @@ export const ROLES = {
   },
   ops_agent: {
     label: "Ops agent",
-    permissions: ["refunds.read", "refunds.create", "flags.read", "flags.toggle", "pii.reveal", "approvals.read", "requests.create"],
+    permissions: [
+      "refunds.read", "refunds.create", "flags.read", "flags.toggle", "vendors.read", "vendors.create", "vendors.review",
+      "pii.reveal", "approvals.read", "requests.create",
+    ],
   },
   ops_approver: {
     label: "Ops approver",
     permissions: [
-      "refunds.read", "refunds.approve", "flags.read", "flags.approve_prod", "settings.read",
-      "settings.approve", "pii.reveal", "approvals.read", "requests.create",
+      "refunds.read", "refunds.approve", "flags.read", "flags.approve_prod", "vendors.read", "vendors.approve",
+      "settings.read", "settings.approve", "pii.reveal", "approvals.read", "requests.create",
     ],
   },
   ops_admin: {
     label: "Ops admin",
     permissions: [
       "settings.read", "settings.write", "admin.read", "users.manage", "audit.read",
-      "refunds.read", "flags.read", "approvals.read", "requests.create", "requests.manage",
+      "refunds.read", "flags.read", "vendors.read", "approvals.read", "requests.create", "requests.manage",
     ],
   },
   // Demo/platform owner: broad access for walkthroughs. Maker-checker still applies: no one approves their own request.
@@ -62,13 +69,14 @@ export const ROLES = {
     permissions: [
       "kyc.case.read", "kyc.case.claim", "kyc.case.decide", "kyc.case.reassign", "kyc.case.signoff", "pii.reveal",
       "refunds.read", "refunds.create", "refunds.approve", "flags.read", "flags.toggle", "flags.approve_prod",
+      "vendors.read", "vendors.create", "vendors.review", "vendors.approve",
       "approvals.read", "audit.read", "settings.read", "settings.write", "settings.approve", "admin.read", "users.manage",
       "requests.create", "requests.manage",
     ],
   },
   auditor: {
     label: "Auditor (read-only)",
-    permissions: ["audit.read", "admin.read", "settings.read", "kyc.case.read", "refunds.read", "flags.read"],
+    permissions: ["audit.read", "admin.read", "settings.read", "kyc.case.read", "refunds.read", "flags.read", "vendors.read"],
   },
 } as const satisfies Record<string, { label: string; permissions: readonly Permission[] }>;
 

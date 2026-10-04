@@ -45,19 +45,40 @@ To see tamper evidence: `sqlite3 prisma/dev.db "PRAGMA writable_schema=1; DROP T
 
 ## Adding app #4
 
-See `.agents/skills/new-internal-app/SKILL.md`. For a typical CRUD/approval tool: one definition file, a manifest entry and permissions. Auth, audit, approvals, PII masking, connectors, automations and admin screens come from the kit.
+See `.agents/skills/new-internal-app/SKILL.md`. For a typical CRUD/approval tool it is exactly four edits, and `pnpm lint:platform` fails if they disagree:
+
+1. `src/apps/<id>/definition.ts` — `defineApp({...})`: fields (mark PII), statuses, actions, approval rule, and the ops-tunable defaults it needs (`settings.optionLists` / `approvalThresholds`, which appear in Admin → Settings automatically).
+2. `src/apps/definitions.ts` — add it to the registry.
+3. `src/apps/manifest.ts` — name, route, read permission, owner, connector allowlist.
+4. `src/kit/rbac.ts` — its permissions and which roles get them (deny by default, so this one kit edit is deliberate).
+
+Vendor onboarding (`src/apps/vendors`) is the worked example: ~50 lines, no new auth, audit, approval, PII or settings code. Auth, audit, approvals, PII masking, connectors, automations and admin screens come from the kit.
 
 ## Layout
 
 ```
-src/kit/        platform: auth, rbac, audit (+ chain verify), approvals, pii + crypto, secrets, settings, connectors, compliance, requests, automation, engine, ui
-src/apps/       app manifests and definitions (kyc = custom, refunds/flags = generated)
-src/app/        Next.js routes
-prisma/         schema, audit triggers, synthetic seed + fixtures
-scripts/        CI lints (permission, audit, deps), audit chain verifier, webhook sender
+src/kit/                platform. Imports apps only through the three registries below (boundary-lint enforces it)
+  auth/ rbac.ts         sessions (DEV, swap for OIDC), permissions + roles (deny by default)
+  audit.ts, audit-verify.ts   hash-chained append-only log; the only writer, always inside a transaction
+  approvals.ts          maker-checker primitive; kit-owned handlers live next to what they execute
+  pii.ts, crypto.ts     seal/unseal/mask behind a KMS adapter; pii-actions.ts = the one reveal path
+  settings.ts           ops-tunable rules; app defaults come from definitions, not from here
+  connectors/           gateway (allowlist + data class + idempotency claim + log) and mock adapters
+  engine/               generated apps: types, defineApp(), fields (seal/redact), actions, execute
+  automation.ts, compliance/, requests*.ts, secrets.ts
+  ui/                   shared components (visual layer)
+src/apps/               the apps
+  manifest.ts           registry 1: catalog (id, route, permission, owner, connectors, custom-app PII source)
+  definitions.ts        registry 2: generated-app behaviour (defineApp results)
+  approval-handlers.ts  registry 3: approval kinds owned by custom apps
+  kyc/                  custom app (queue, SLA, documents, vendor webhook)
+  refunds/ flags/ vendors/   generated apps: one definition.ts each
+src/app/                Next.js routes (shell, /kyc, /apps/[appId] generic pages, admin, api)
+prisma/                 schema, audit triggers, synthetic seed + fixtures
+scripts/                CI lints (permission, audit, boundaries, deps), audit chain verifier, webhook sender
 docs/adr/       architecture decisions with rejected alternatives; docs/devin/ = ops → Devin flow
 deploy/k8s/     egress NetworkPolicy mirroring the connector catalog
 .agents/skills/ instructions Devin follows when changing this repo
 ```
 
-Production swaps: SQLite → Postgres (audit `seq` from a sequence), DEV sign-in → OIDC (Entra ID/Okta) with SCIM roles, mock connectors → real SDKs, `LocalKms` → AWS/GCP KMS envelope keys, env secrets → secrets manager, audit chain shipped to SIEM + object-locked storage. The charter and ADRs say who owns each.
+Production swaps: SQLite → Postgres (the audit chain head row already serialises writers portably), DEV sign-in → OIDC (Entra ID/Okta) with SCIM roles, mock connectors → real SDKs, `LocalKms` → AWS/GCP KMS envelope keys, env secrets → secrets manager, audit chain shipped to SIEM + object-locked storage. The charter and ADRs say who owns each.

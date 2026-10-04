@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "db:reset": "test -f .env || cp .env.example .env; prisma db push --force-reset --skip-generate && prisma generate && tsx prisma/seed.ts",
     "webhooks": "tsx scripts/send-webhooks.ts",
-    "lint:platform": "tsx scripts/lint-permissions.ts && tsx scripts/lint-audit.ts && tsx scripts/lint-deps.ts",
+    "lint:platform": "tsx scripts/lint-permissions.ts && tsx scripts/lint-audit.ts && tsx scripts/lint-boundaries.ts && tsx scripts/lint-deps.ts",
     "audit:verify": "tsx scripts/verify-audit.ts"
   },
   "dependencies": {

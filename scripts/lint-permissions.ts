@@ -37,6 +37,8 @@ for (const abs of walk(join(ROOT, "src"))) {
     continue;
   }
   if (isServerAction) {
+    // Only `export async function` is checked, so any other export shape is rejected rather than silently skipped.
+    for (const m of src.matchAll(/^export\s+(?!async function\b|type\b|interface\b)(\w+)/gm)) failures.push(`${rel}: '${m[0]}' is not a checked shape; server actions must be 'export async function'`);
     const fns = src.split(/export async function /).slice(1);
     for (const fn of fns) {
       const name = fn.split("(")[0];

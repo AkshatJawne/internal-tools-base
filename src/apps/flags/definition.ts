@@ -1,4 +1,4 @@
-import type { AppDefinition } from "@/kit/engine/types";
+import { defineApp } from "@/kit/engine/definition";
 import { flags as flagService } from "@/kit/connectors";
 
 const prodNeedsApproval = {
@@ -17,7 +17,7 @@ const push = (enabled: boolean) => async ({ appId, data }: { appId: string; data
   return { lastSyncedAt: res.syncedAt };
 };
 
-export const flags: AppDefinition = {
+export const flags = defineApp({
   appId: "flags",
   titleField: "key",
   permissions: { read: "flags.read", create: "flags.toggle" },
@@ -31,11 +31,10 @@ export const flags: AppDefinition = {
   statuses: {
     off: { label: "Off", tone: "gray" },
     on: { label: "On", tone: "green" },
-    pending_approval: { label: "Pending approval", tone: "amber" },
   },
   initialStatus: "off",
   actions: [
     { id: "enable", label: "Enable", from: ["off"], to: "on", permission: "flags.toggle", tone: "primary", approval: prodNeedsApproval, effect: push(true) },
     { id: "disable", label: "Disable", from: ["on"], to: "off", permission: "flags.toggle", tone: "danger", approval: prodNeedsApproval, effect: push(false) },
   ],
-};
+});

@@ -20,6 +20,13 @@ model User {
 
 // Append-only. DB triggers (prisma/audit-triggers.sql) reject UPDATE/DELETE.
 // Hash-chained: hash = sha256(prevHash + canonical event). `pnpm audit:verify` walks the chain.
+/// Single row. Writers claim the next seq by updating it where seq = the value they read (see kit/audit.ts).
+model AuditChainHead {
+  id   Int    @id
+  seq  Int
+  hash String
+}
+
 model AuditEvent {
   id         String   @id @default(cuid())
   seq        Int      @unique

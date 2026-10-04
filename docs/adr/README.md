@@ -12,3 +12,4 @@ Short, one decision each, with the rejected alternative. Add one when you change
 | [0006](0006-field-level-pii-encryption.md) | Field-level PII encryption behind a KMS adapter |
 | [0007](0007-connector-gateway-and-egress.md) | Connector gateway with data classes, plus network egress policy |
 | [0008](0008-change-requests.md) | Ops self-service is tiered; code changes go through change requests |
+| [0009](0009-kit-app-boundary.md) | The kit reads apps only through three registries (boundary-lint) |
