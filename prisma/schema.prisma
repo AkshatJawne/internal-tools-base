@@ -1,0 +1,131 @@
+// SQLite for local demo. Schema avoids SQLite-only features so `provider = "postgresql"` works in production.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id     String  @id
+  email  String  @unique
+  name   String
+  role   String
+  team   String
+  active Boolean @default(true)
+}
+
+// Append-only. DB triggers (prisma/audit-triggers.sql) reject UPDATE/DELETE.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  actorId    String?
+  actorName  String
+  action     String
+  appId      String?
+  entityType String
+  entityId   String
+  before     String?
+  after      String?
+  reason     String?
+  requestId  String
+
+  @@index([entityType, entityId])
+  @@index([at])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model ApprovalRequest {
+  id                 String    @id @default(cuid())
+  kind               String
+  appId              String
+  entityType         String
+  entityId           String
+  summary            String
+  payload            String
+  makerId            String
+  makerName          String
+  makerReason        String?
+  requiredPermission String
+  status             String    @default("pending") // pending | approved | rejected | failed
+  checkerId          String?
+  checkerName        String?
+  decisionReason     String?
+  decidedAt          DateTime?
+  executedAt         DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@index([status])
+}
+
+// Generic table backing config-defined ("generated") apps, like Dataverse rows.
+model Record {
+  id        String   @id @default(cuid())
+  appId     String
+  status    String
+  data      String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([appId, status])
+}
+
+model KycCase {
+  id             String    @id @default(cuid())
+  externalRef    String    @unique
+  firstName      String
+  lastName       String
+  email          String
+  country        String
+  ssn            String
+  dob            String
+  riskTier       String
+  status         String    @default("new") // new | in_review | pending_signoff | approved | rejected | escalated
+  assigneeId     String?
+  idScore        Int
+  sanctionsHit   Boolean   @default(false)
+  pepHit         Boolean   @default(false)
+  vendorPayload  String
+  decision       String?
+  decisionReason String?
+  decisionNote   String?
+  receivedAt     DateTime  @default(now())
+  decidedAt      DateTime?
+  documents      KycDocument[]
+
+  @@index([status, riskTier])
+}
+
+model KycDocument {
+  id     String  @id @default(cuid())
+  caseId String
+  kind   String
+  svg    String
+  case   KycCase @relation(fields: [caseId], references: [id])
+}
+
+model WebhookEvent {
+  eventId    String   @id
+  source     String
+  receivedAt DateTime @default(now())
+}
+
+model ConnectorCall {
+  id             String   @id @default(cuid())
+  at             DateTime @default(now())
+  connector      String
+  operation      String
+  appId          String
+  status         String // ok | blocked | error
+  request        String
+  response       String?
+  idempotencyKey String?  @unique
+}
